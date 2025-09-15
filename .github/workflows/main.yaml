@@ -1,0 +1,22 @@
+name: Main Build
+
+
+on: 
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: read
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+      # - name: Set up JDK
+      #   uses: actions/setup-java@v2
+      #   with: 
+      #     java-version: '24'
+      #     distribution: 'temurin'
+      - name: Build
+        run: echo "Hello github"
