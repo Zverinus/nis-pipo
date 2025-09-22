@@ -17,5 +17,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '^1.22'
+          cache: true
       - name: Build
-        run: go build -o ./out/nis . && ./out/nis
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: go build -o ./build/nis-pipo-${{ github.run_number }} . 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build binary ${{ github.run_number }}
+          path: ./build/nis-pipo-${{ github.run_number }}
