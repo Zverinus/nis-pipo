@@ -13,10 +13,10 @@ jobs:
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
-      # - name: Set up JDK
-      #   uses: actions/setup-java@v2
-      #   with: 
-      #     java-version: '24'
-      #     distribution: 'temurin'
+      - name: Set up JDK
+        uses: actions/setup-go@v5
+        with:
+          go-version: '^1.22'
+          cache: true
       - name: Build
-        run: echo "Hello github"
+        run: go build .
