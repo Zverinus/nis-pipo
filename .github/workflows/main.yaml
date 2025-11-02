@@ -21,7 +21,7 @@ jobs:
       - name: Build
         env:
           BUILD_NUMBER: ${{ github.run_number }}
-        run: go build -o ./build/nis-pipo-${{ github.run_number }} . 
+        run: go build -o ./build/nis-pipo-${{ github.run_number }} ./cmd/app
       - uses: actions/upload-artifact@v4
         with:
           name: Build binary ${{ github.run_number }}

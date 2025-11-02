@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    container_name: pg-pipo
+    restart: always
+    environment:
+      POSTGRES_DB: pipo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
