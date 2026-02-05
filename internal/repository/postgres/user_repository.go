@@ -36,6 +36,16 @@ func (repo *UserRepo) GetByID(ctx context.Context, id string) (user.User, error)
 	err := repo.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.FirstName, &u.LastName, &u.CreatedAt, &u.UpdatedAt)
 	return u, err
 }
+
+func (repo *UserRepo) GetByEmail(ctx context.Context, email string) (user.User, error) {
+	const query = `
+		SELECT id::text, username, email, password_hash, first_name, last_name, created_at, updated_at
+		FROM users
+		WHERE email = $1`
+	var u user.User
+	err := repo.db.QueryRowContext(ctx, query, email).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.FirstName, &u.LastName, &u.CreatedAt, &u.UpdatedAt)
+	return u, err
+}
 	
 func (repo *UserRepo) List(ctx context.Context, limit, offset int) ([]user.User, error) {
 	const query = `

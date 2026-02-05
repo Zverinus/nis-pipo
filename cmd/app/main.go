@@ -3,12 +3,13 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
+
 	"github.com/joho/godotenv"
 	"nis-pipo/internal/db"
 	"nis-pipo/internal/repository/postgres"
 	"nis-pipo/internal/transport"
 	"nis-pipo/internal/user"
-	"os"
 )
 
 func main() {
@@ -16,21 +17,22 @@ func main() {
 
 	dsn := os.Getenv("DB_DSN")
 	dbx, err := db.Connect(dsn)
-
 	if err != nil {
 		log.Fatal(err)
-		
 	}
 
-	err = db.Migrate(dbx)
-	if err != nil {
+	if err := db.Migrate(dbx); err != nil {
 		log.Fatal(err)
 	}
 
 	uRepo := postgres.NewUserRepo(dbx)
 	uService := user.NewService(uRepo)
 
-	handler := transport.NewUserHandler(uService)
-	handler.InitHandling()
-	http.ListenAndServe(":8080", nil)
+	handler := transport.SetupRouter(uService)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Listening on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, handler))
 }
