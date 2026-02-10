@@ -7,8 +7,8 @@ import (
 	"nis-pipo/internal/user"
 )
 
-type UserRepo struct{ 
-	db *sql.DB 
+type UserRepo struct {
+	db *sql.DB
 }
 
 func NewUserRepo(db *sql.DB) *UserRepo { 
