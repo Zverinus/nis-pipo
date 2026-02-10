@@ -1,10 +1,13 @@
 # nis-pipo
 
 build:
-	go build -o nis-pipo ./cmd/app
+	go build -o build/nis-pipo ./cmd/app
 
 run: build
-	./nis-pipo
+	./build/nis-pipo
+
+test:
+	go test ./...
 
 db:
 	docker compose up -d db
