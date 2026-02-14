@@ -15,10 +15,40 @@ type AuthHandler struct {
 	service *user.Service
 }
 
+type AuthRegisterRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AuthRegisterResponse struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+}
+
+type AuthLoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type AuthLoginResponse struct {
+	Token string `json:"token"`
+}
+
 func NewAuthHandler(service *user.Service) *AuthHandler {
 	return &AuthHandler{service: service}
 }
 
+// Register godoc
+//
+//	@Summary	Register
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		AuthRegisterRequest	true	"email, password"
+//	@Success	201		{object}	AuthRegisterResponse
+//	@Failure	400		"bad request"
+//	@Failure	409		"user already exists"
+//	@Router		/api/auth/register [post]
 func (h *AuthHandler) Register() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w)
@@ -26,10 +56,7 @@ func (h *AuthHandler) Register() http.Handler {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		var req struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
+		var req AuthRegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
@@ -53,6 +80,17 @@ func (h *AuthHandler) Register() http.Handler {
 	})
 }
 
+// Login godoc
+//
+//	@Summary	Login
+//	@Tags		auth
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		AuthLoginRequest	true	"email, password"
+//	@Success	200		{object}	AuthLoginResponse
+//	@Failure	400		"bad request"
+//	@Failure	401		"invalid email or password"
+//	@Router		/api/auth/login [post]
 func (h *AuthHandler) Login() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		enableCors(w)
@@ -60,10 +98,7 @@ func (h *AuthHandler) Login() http.Handler {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		var req struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
+		var req AuthLoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return

@@ -34,5 +34,6 @@ func main() {
 		port = "8080"
 	}
 	log.Printf("Listening on :%s", port)
+	log.Printf("Swagger: http://localhost:%s/swagger/index.html", port)
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

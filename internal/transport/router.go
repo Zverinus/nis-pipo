@@ -3,6 +3,9 @@ package transport
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/swaggo/http-swagger"
+	_ "nis-pipo/internal/transport/docs"
 	"nis-pipo/internal/middleware"
 	"nis-pipo/internal/user"
 )
@@ -10,15 +13,11 @@ import (
 func SetupRouter(userService *user.Service) http.Handler {
 	authHandler := NewAuthHandler(userService)
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Post("/api/auth/register", authHandler.Register().ServeHTTP)
+	r.Post("/api/auth/login", authHandler.Login().ServeHTTP)
 
-	mux.Handle("POST /api/auth/register", authHandler.Register())
-	mux.Handle("POST /api/auth/login", authHandler.Login())
+	r.Handle("/swagger/*", httpSwagger.Handler())
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("API"))
-	})
-
-	handler := middleware.CORS(mux)
-	return handler
+	return middleware.CORS(r)
 }
