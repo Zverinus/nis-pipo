@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"nis-pipo/internal/db"
+	"nis-pipo/internal/meeting"
 	"nis-pipo/internal/repository/postgres"
 	"nis-pipo/internal/transport"
 	"nis-pipo/internal/user"
@@ -27,8 +28,14 @@ func main() {
 
 	uRepo := postgres.NewUserRepo(dbx)
 	uService := user.NewService(uRepo)
+	meetingRepo := postgres.NewMeetingRepo(dbx)
+	meetingService := meeting.NewService(meetingRepo)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "default-secret"
+	}
 
-	handler := transport.SetupRouter(uService)
+	handler := transport.SetupRouter(uService, meetingService, jwtSecret)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
