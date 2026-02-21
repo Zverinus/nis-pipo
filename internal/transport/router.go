@@ -8,12 +8,14 @@ import (
 	_ "nis-pipo/internal/transport/docs"
 	"nis-pipo/internal/meeting"
 	"nis-pipo/internal/middleware"
+	"nis-pipo/internal/participant"
 	"nis-pipo/internal/user"
 )
 
-func SetupRouter(userService *user.Service, meetingService *meeting.Service, jwtSecret string) http.Handler {
+func SetupRouter(userService *user.Service, meetingService *meeting.Service, participantService *participant.Service, jwtSecret string) http.Handler {
 	authHandler := NewAuthHandler(userService)
 	meetingHandler := NewMeetingHandler(meetingService)
+	participantHandler := NewParticipantHandler(participantService)
 
 	r := chi.NewRouter()
 	r.Post("/api/auth/register", authHandler.Register().ServeHTTP)
@@ -24,6 +26,8 @@ func SetupRouter(userService *user.Service, meetingService *meeting.Service, jwt
 
 	r.Route("/api/meetings", func(r chi.Router) {
 		r.Get("/{id}", meetingHandler.GetByID())
+		r.Post("/{id}/participants", participantHandler.Create())
+		r.Put("/{id}/participants/{token}/slots", participantHandler.SetSlots())
 		r.With(middleware.Auth(jwtSecret)).Post("/", meetingHandler.Create())
 		r.With(middleware.Auth(jwtSecret)).Put("/{id}", meetingHandler.Update())
 		r.With(middleware.Auth(jwtSecret)).Delete("/{id}", meetingHandler.Delete())
