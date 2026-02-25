@@ -27,6 +27,29 @@ func (repo *MeetingRepo) Create(ctx context.Context, m meeting.Meeting) (meeting
 	return out, err
 }
 
+func (repo *MeetingRepo) ListByOwner(ctx context.Context, ownerID string) ([]meeting.Meeting, error) {
+	const query = `
+		SELECT id::text, owner_id::text, title, description, date_start, date_end, slot_minutes, status, final_slot_index, created_at, updated_at
+		FROM meetings
+		WHERE owner_id = $1
+		ORDER BY created_at DESC`
+	rows, err := repo.db.QueryContext(ctx, query, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []meeting.Meeting
+	for rows.Next() {
+		var m meeting.Meeting
+		if err := rows.Scan(&m.ID, &m.OwnerID, &m.Title, &m.Description, &m.DateStart, &m.DateEnd,
+			&m.SlotMinutes, &m.Status, &m.FinalSlotIndex, &m.CreatedAt, &m.UpdatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 func (repo *MeetingRepo) GetByID(ctx context.Context, id string) (meeting.Meeting, error) {
 	const query = `
 		SELECT id::text, owner_id::text, title, description, date_start, date_end, slot_minutes, status, final_slot_index, created_at, updated_at
@@ -51,6 +74,14 @@ func (repo *MeetingRepo) Update(ctx context.Context, id, title, description stri
 		&m.SlotMinutes, &m.Status, &m.FinalSlotIndex, &m.CreatedAt, &m.UpdatedAt,
 	)
 	return m, err
+}
+
+func (repo *MeetingRepo) Finalize(ctx context.Context, id string, finalSlotIndex int) error {
+	_, err := repo.db.ExecContext(ctx,
+		`UPDATE meetings SET status = 'finalized', final_slot_index = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+		id, finalSlotIndex,
+	)
+	return err
 }
 
 func (repo *MeetingRepo) Delete(ctx context.Context, id string) error {

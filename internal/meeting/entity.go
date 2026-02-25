@@ -15,3 +15,9 @@ type Meeting struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
+
+type SlotResult struct {
+	SlotIndex        int      `json:"slot_index"`
+	Count            int      `json:"count"`
+	ParticipantNames []string `json:"participant_names,omitempty"`
+}

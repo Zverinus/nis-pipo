@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"nis-pipo/internal/middleware"
 	"nis-pipo/internal/user"
 )
 
@@ -116,7 +117,7 @@ func (h *AuthHandler) Login() http.Handler {
 			http.Error(w, "cannot login", http.StatusInternalServerError)
 			return
 		}
-		token, err := h.generateJWT(u.ID)
+		token, err := h.generateJWT(u.ID, u.Email)
 		if err != nil {
 			http.Error(w, "cannot generate token", http.StatusInternalServerError)
 			return
@@ -125,7 +126,33 @@ func (h *AuthHandler) Login() http.Handler {
 	})
 }
 
-func (h *AuthHandler) generateJWT(userID string) (string, error) {
+// Me godoc
+//
+//	@Summary	Get current user
+//	@Tags		auth
+//	@Produce	json
+//	@Security	BearerAuth
+//	@Success	200	{object}	map[string]string
+//	@Failure	401	"unauthorized"
+//	@Router		/api/auth/me [get]
+func (h *AuthHandler) Me() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(w)
+		userID, _ := r.Context().Value(middleware.UserIDKey).(string)
+		if userID == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		u, err := h.service.GetByID(r.Context(), userID)
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"id": u.ID, "email": u.Email})
+	})
+}
+
+func (h *AuthHandler) generateJWT(userID, email string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "default-secret"
@@ -137,6 +164,7 @@ func (h *AuthHandler) generateJWT(userID string) (string, error) {
 	d, _ := time.ParseDuration(expiry)
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"email":   email,
 		"exp":     time.Now().Add(d).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
