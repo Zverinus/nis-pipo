@@ -9,22 +9,27 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '^1.22'
-          cache: true
-
-      - name: Build
+    services:
+      postgres:
+        image: postgres:16
         env:
-          BUILD_NUMBER: ${{ github.run_number }}
-        run: make build
-
-      - uses: actions/upload-artifact@v4
+          POSTGRES_DB: pipo
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 1234
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          name: Build binary ${{ github.run_number }}
-          path: build/nis-pipo
+          go-version: '1.24'
+          cache: true
+      - name: Swagger
+        run: make swagger
+      - name: Build
+        run: make build
+      - name: Test
+        env:
+          DB_DSN: postgres://postgres:1234@localhost:5432/pipo?sslmode=disable
+        run: go test ./...

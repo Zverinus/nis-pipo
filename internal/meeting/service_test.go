@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"nis-pipo/internal/participantslots"
 )
 
 func mustDate(s string) time.Time {
@@ -66,35 +65,22 @@ func (m *mockMeetingRepo) ListByOwner(ctx context.Context, ownerID string) ([]Me
 }
 
 type mockSlotsRepo struct {
-	getDetailsByMeeting func(ctx context.Context, meetingID string) ([]participantslots.SlotDetails, error)
+	getDetailsByMeeting func(ctx context.Context, meetingID string) ([]SlotResult, error)
 }
 
 func (m *mockSlotsRepo) SetSlots(ctx context.Context, participantID string, slotIndexes []int) error {
 	return nil
 }
 
-func (m *mockSlotsRepo) GetByParticipant(ctx context.Context, participantID string) ([]int, error) {
-	return nil, nil
-}
-
-func (m *mockSlotsRepo) GetCountsByMeeting(ctx context.Context, meetingID string) ([]participantslots.SlotCount, error) {
-	return nil, nil
-}
-
-func (m *mockSlotsRepo) GetDetailsByMeeting(ctx context.Context, meetingID string) ([]participantslots.SlotDetails, error) {
+func (m *mockSlotsRepo) GetDetailsByMeeting(ctx context.Context, meetingID string) ([]SlotResult, error) {
 	if m.getDetailsByMeeting != nil {
 		return m.getDetailsByMeeting(ctx, meetingID)
 	}
 	return nil, nil
 }
 
-func (m *mockSlotsRepo) CountByMeetingAndSlot(ctx context.Context, meetingID string, slotIndex int) (int, error) {
-	return 0, nil
-}
-
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
-	svc := func(repo *mockMeetingRepo) *Service { return NewService(repo, &mockSlotsRepo{}) }
 
 	t.Run("valid", func(t *testing.T) {
 		var passed Meeting
@@ -105,7 +91,7 @@ func TestCreate(t *testing.T) {
 				return m, nil
 			},
 		}
-		m, err := svc(r).Create(ctx, "o1", "Meet", "Desc", mustDate("2025-03-01"), mustDate("2025-03-03"), 30)
+		m, err := NewService(r, &mockSlotsRepo{}).Create(ctx, "o1", "Meet", "Desc", mustDate("2025-03-01"), mustDate("2025-03-03"), 30)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -115,14 +101,14 @@ func TestCreate(t *testing.T) {
 	})
 
 	t.Run("date_end before date_start", func(t *testing.T) {
-		_, err := svc(&mockMeetingRepo{}).Create(ctx, "o1", "x", "x", mustDate("2025-03-05"), mustDate("2025-03-01"), 30)
+		_, err := NewService(&mockMeetingRepo{}, &mockSlotsRepo{}).Create(ctx, "o1", "x", "x", mustDate("2025-03-05"), mustDate("2025-03-01"), 30)
 		if err != ErrInvalidDates {
 			t.Fatalf("got %v, want ErrInvalidDates", err)
 		}
 	})
 
 	t.Run("slot_minutes must be 15/30/60", func(t *testing.T) {
-		_, err := svc(&mockMeetingRepo{}).Create(ctx, "o1", "x", "x", mustDate("2025-03-01"), mustDate("2025-03-03"), 45)
+		_, err := NewService(&mockMeetingRepo{}, &mockSlotsRepo{}).Create(ctx, "o1", "x", "x", mustDate("2025-03-01"), mustDate("2025-03-03"), 45)
 		if err != ErrInvalidSlotMin {
 			t.Fatalf("got %v, want ErrInvalidSlotMin", err)
 		}

@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"nis-pipo/internal/participantslots"
 )
+
+type SlotsRepo interface {
+	SetSlots(ctx context.Context, participantID string, slotIndexes []int) error
+	GetDetailsByMeeting(ctx context.Context, meetingID string) ([]SlotResult, error)
+}
 
 var (
 	ErrInvalidDates     = errors.New("date_end must be >= date_start")
@@ -17,11 +20,11 @@ var (
 )
 
 type Service struct {
-	repo       Repository
-	slotsRepo participantslots.Repository
+	repo      Repository
+	slotsRepo SlotsRepo
 }
 
-func NewService(repo Repository, slotsRepo participantslots.Repository) *Service {
+func NewService(repo Repository, slotsRepo SlotsRepo) *Service {
 	return &Service{repo: repo, slotsRepo: slotsRepo}
 }
 
@@ -33,13 +36,13 @@ func (s *Service) Create(ctx context.Context, ownerID, title, description string
 		return Meeting{}, ErrInvalidSlotMin
 	}
 	m := Meeting{
-		OwnerID:    ownerID,
-		Title:      title,
+		OwnerID:     ownerID,
+		Title:       title,
 		Description: description,
-		DateStart:  dateStart,
-		DateEnd:    dateEnd,
+		DateStart:   dateStart,
+		DateEnd:     dateEnd,
 		SlotMinutes: slotMinutes,
-		Status:     "active",
+		Status:      "active",
 	}
 	return s.repo.Create(ctx, m)
 }
@@ -82,22 +85,10 @@ func (s *Service) GetResults(ctx context.Context, meetingID, ownerID string) ([]
 	if m.OwnerID != ownerID {
 		return nil, ErrForbidden
 	}
-	details, err := s.slotsRepo.GetDetailsByMeeting(ctx, meetingID)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]SlotResult, len(details))
-	for i, d := range details {
-		out[i] = SlotResult{
-			SlotIndex:        d.SlotIndex,
-			Count:            d.Count,
-			ParticipantNames: d.ParticipantNames,
-		}
-	}
-	return out, nil
+	return s.slotsRepo.GetDetailsByMeeting(ctx, meetingID)
 }
 
-func slotCount(m Meeting) int {
+func SlotCount(m Meeting) int {
 	start := time.Date(m.DateStart.Year(), m.DateStart.Month(), m.DateStart.Day(), 0, 0, 0, 0, time.UTC)
 	end := time.Date(m.DateEnd.Year(), m.DateEnd.Month(), m.DateEnd.Day(), 0, 0, 0, 0, time.UTC)
 	days := int(end.Sub(start).Hours()/24) + 1
@@ -112,7 +103,7 @@ func (s *Service) Finalize(ctx context.Context, meetingID, ownerID string, final
 	if m.OwnerID != ownerID {
 		return ErrForbidden
 	}
-	n := slotCount(m)
+	n := SlotCount(m)
 	if finalSlotIndex < 0 || finalSlotIndex >= n {
 		return ErrInvalidSlotIndex
 	}

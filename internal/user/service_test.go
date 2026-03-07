@@ -31,15 +31,11 @@ func (m *mockRepo) GetByID(ctx context.Context, id string) (User, error) {
 	return User{}, nil
 }
 
-func (m *mockRepo) List(ctx context.Context, limit, offset int) ([]User, error) {
-	return nil, nil
-}
-
 func TestRegister(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		var savedHash string
 		r := &mockRepo{
-			getByEmail: func(context.Context, string) (User, error) { return User{}, errors.New("") },
+			getByEmail: func(context.Context, string) (User, error) { return User{}, ErrNotFound },
 			create: func(_ context.Context, _, _, hash, _, _ string) (User, error) {
 				savedHash = hash
 				return User{ID: "1", Email: "a@b"}, nil
@@ -99,7 +95,7 @@ func TestLogin(t *testing.T) {
 	})
 
 	t.Run("user not found", func(t *testing.T) {
-		r := &mockRepo{getByEmail: func(context.Context, string) (User, error) { return User{}, errors.New("") }}
+		r := &mockRepo{getByEmail: func(context.Context, string) (User, error) { return User{}, ErrNotFound }}
 		_, err := NewService(r).Login(context.Background(), "ghost@x.com", "any")
 		if err != ErrInvalidCreds {
 			t.Fatalf("got %v, want ErrInvalidCreds", err)

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"nis-pipo/internal/middleware"
 	"nis-pipo/internal/user"
 )
 
@@ -52,11 +51,6 @@ func NewAuthHandler(service *user.Service) *AuthHandler {
 //	@Router		/api/auth/register [post]
 func (h *AuthHandler) Register() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 		var req AuthRegisterRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -72,6 +66,7 @@ func (h *AuthHandler) Register() http.Handler {
 				http.Error(w, "email already exists", http.StatusConflict)
 				return
 			}
+			logError(r, "register", err)
 			http.Error(w, "cannot register", http.StatusInternalServerError)
 			return
 		}
@@ -94,11 +89,6 @@ func (h *AuthHandler) Register() http.Handler {
 //	@Router		/api/auth/login [post]
 func (h *AuthHandler) Login() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
 		var req AuthLoginRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
@@ -114,11 +104,13 @@ func (h *AuthHandler) Login() http.Handler {
 				http.Error(w, "invalid email or password", http.StatusUnauthorized)
 				return
 			}
+			logError(r, "login", err)
 			http.Error(w, "cannot login", http.StatusInternalServerError)
 			return
 		}
 		token, err := h.generateJWT(u.ID, u.Email)
 		if err != nil {
+			logError(r, "generate token", err)
 			http.Error(w, "cannot generate token", http.StatusInternalServerError)
 			return
 		}
@@ -137,15 +129,19 @@ func (h *AuthHandler) Login() http.Handler {
 //	@Router		/api/auth/me [get]
 func (h *AuthHandler) Me() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		userID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if userID == "" {
+		userID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 		u, err := h.service.GetByID(r.Context(), userID)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			if errors.Is(err, user.ErrNotFound) {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			logError(r, "get current user", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"id": u.ID, "email": u.Email})
@@ -161,7 +157,10 @@ func (h *AuthHandler) generateJWT(userID, email string) (string, error) {
 	if expiry == "" {
 		expiry = "24h"
 	}
-	d, _ := time.ParseDuration(expiry)
+	d, err := time.ParseDuration(expiry)
+	if err != nil {
+		d = 24 * time.Hour
+	}
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"email":   email,

@@ -39,7 +39,6 @@ type SetSlotsRequest struct {
 //	@Router		/api/meetings/{id}/participants [post]
 func (h *ParticipantHandler) Create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
 		meetingID := chi.URLParam(r, "id")
 		if meetingID == "" {
 			http.Error(w, "meeting id required", http.StatusBadRequest)
@@ -60,10 +59,11 @@ func (h *ParticipantHandler) Create() http.HandlerFunc {
 				http.Error(w, "meeting is finalized", http.StatusConflict)
 				return
 			}
+			logError(r, "create participant", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		writeJSON(w, http.StatusCreated, map[string]string{"id": p.ID, "token": p.ID})
+		writeJSON(w, http.StatusCreated, map[string]string{"id": p.ID})
 	}
 }
 
@@ -72,21 +72,20 @@ func (h *ParticipantHandler) Create() http.HandlerFunc {
 //	@Summary	Set participant slot choices
 //	@Tags		participants
 //	@Accept		json
-//	@Param		id		path		string				true	"meeting ID"
-//	@Param		token	path		string				true	"participant token"
-//	@Param		body	body		SetSlotsRequest		true	"slot_indexes"
+//	@Param		id				path		string				true	"meeting ID"
+//	@Param		participant_id	path		string				true	"participant ID"
+//	@Param		body			body		SetSlotsRequest		true	"slot_indexes"
 //	@Success	204		"no content"
 //	@Failure	400		"bad request"
 //	@Failure	404		"participant or meeting not found"
 //	@Failure	409		"meeting finalized"
-//	@Router		/api/meetings/{id}/participants/{token}/slots [put]
+//	@Router		/api/meetings/{id}/participants/{participant_id}/slots [put]
 func (h *ParticipantHandler) SetSlots() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
 		meetingID := chi.URLParam(r, "id")
-		token := chi.URLParam(r, "token")
-		if meetingID == "" || token == "" {
-			http.Error(w, "meeting id and token required", http.StatusBadRequest)
+		participantID := chi.URLParam(r, "participant_id")
+		if meetingID == "" || participantID == "" {
+			http.Error(w, "meeting id and participant id required", http.StatusBadRequest)
 			return
 		}
 		var req SetSlotsRequest
@@ -94,10 +93,7 @@ func (h *ParticipantHandler) SetSlots() http.HandlerFunc {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		if req.SlotIndexes == nil {
-			req.SlotIndexes = []int{}
-		}
-		err := h.service.SetSlots(r.Context(), meetingID, token, req.SlotIndexes)
+		err := h.service.SetSlots(r.Context(), meetingID, participantID, req.SlotIndexes)
 		if err != nil {
 			if err == participant.ErrMeetingNotFound || err == participant.ErrParticipantNotFound {
 				http.Error(w, "not found", http.StatusNotFound)
@@ -111,6 +107,7 @@ func (h *ParticipantHandler) SetSlots() http.HandlerFunc {
 				http.Error(w, "slot_index out of range", http.StatusBadRequest)
 				return
 			}
+			logError(r, "set slots", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}

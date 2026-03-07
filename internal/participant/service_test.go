@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"nis-pipo/internal/meeting"
-	"nis-pipo/internal/participantslots"
 )
 
 func mustDate(s string) time.Time {
@@ -17,8 +16,7 @@ func mustDate(s string) time.Time {
 
 type mockParticipantRepo struct {
 	create             func(ctx context.Context, meetingID, displayName string) (Participant, error)
-	getByID            func(ctx context.Context, id string) (Participant, error)
-	getByMeetingAndToken func(ctx context.Context, meetingID, token string) (Participant, error)
+	getByMeetingAndID  func(ctx context.Context, meetingID, participantID string) (Participant, error)
 }
 
 func (m *mockParticipantRepo) Create(ctx context.Context, meetingID, displayName string) (Participant, error) {
@@ -28,16 +26,9 @@ func (m *mockParticipantRepo) Create(ctx context.Context, meetingID, displayName
 	return Participant{}, nil
 }
 
-func (m *mockParticipantRepo) GetByID(ctx context.Context, id string) (Participant, error) {
-	if m.getByID != nil {
-		return m.getByID(ctx, id)
-	}
-	return Participant{}, nil
-}
-
-func (m *mockParticipantRepo) GetByMeetingAndToken(ctx context.Context, meetingID, token string) (Participant, error) {
-	if m.getByMeetingAndToken != nil {
-		return m.getByMeetingAndToken(ctx, meetingID, token)
+func (m *mockParticipantRepo) GetByMeetingAndID(ctx context.Context, meetingID, participantID string) (Participant, error) {
+	if m.getByMeetingAndID != nil {
+		return m.getByMeetingAndID(ctx, meetingID, participantID)
 	}
 	return Participant{}, errors.New("not found")
 }
@@ -84,20 +75,8 @@ func (m *mockSlotsRepo) SetSlots(ctx context.Context, participantID string, slot
 	return nil
 }
 
-func (m *mockSlotsRepo) GetByParticipant(ctx context.Context, participantID string) ([]int, error) {
+func (m *mockSlotsRepo) GetDetailsByMeeting(ctx context.Context, meetingID string) ([]meeting.SlotResult, error) {
 	return nil, nil
-}
-
-func (m *mockSlotsRepo) GetCountsByMeeting(ctx context.Context, meetingID string) ([]participantslots.SlotCount, error) {
-	return nil, nil
-}
-
-func (m *mockSlotsRepo) GetDetailsByMeeting(ctx context.Context, meetingID string) ([]participantslots.SlotDetails, error) {
-	return nil, nil
-}
-
-func (m *mockSlotsRepo) CountByMeetingAndSlot(ctx context.Context, meetingID string, slotIndex int) (int, error) {
-	return 0, nil
 }
 
 func activeMeeting(id string) meeting.Meeting {
@@ -151,7 +130,7 @@ func TestSetSlots(t *testing.T) {
 		var savedSlots []int
 		mRepo := &mockMeetingRepo{getByID: func(_ context.Context, id string) (meeting.Meeting, error) { return activeMeeting(id), nil }}
 		pRepo := &mockParticipantRepo{
-			getByMeetingAndToken: func(_ context.Context, _, _ string) (Participant, error) { return Participant{ID: "p1"}, nil },
+			getByMeetingAndID: func(_ context.Context, _, _ string) (Participant, error) { return Participant{ID: "p1"}, nil },
 		}
 		sRepo := &mockSlotsRepo{
 			setSlots: func(_ context.Context, _ string, idx []int) error { savedSlots = idx; return nil },
@@ -165,10 +144,28 @@ func TestSetSlots(t *testing.T) {
 		}
 	})
 
+	t.Run("deduplicate slot_indexes", func(t *testing.T) {
+		var savedSlots []int
+		mRepo := &mockMeetingRepo{getByID: func(_ context.Context, id string) (meeting.Meeting, error) { return activeMeeting(id), nil }}
+		pRepo := &mockParticipantRepo{
+			getByMeetingAndID: func(_ context.Context, _, _ string) (Participant, error) { return Participant{ID: "p1"}, nil },
+		}
+		sRepo := &mockSlotsRepo{
+			setSlots: func(_ context.Context, _ string, idx []int) error { savedSlots = idx; return nil },
+		}
+		err := NewService(pRepo, mRepo, sRepo).SetSlots(ctx, "m1", "p1", []int{0, 0, 1, 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(savedSlots) != 2 {
+			t.Fatalf("expected 2 unique slots, got %v", savedSlots)
+		}
+	})
+
 	t.Run("slot_index out of range", func(t *testing.T) {
 		mRepo := &mockMeetingRepo{getByID: func(_ context.Context, id string) (meeting.Meeting, error) { return activeMeeting(id), nil }}
 		pRepo := &mockParticipantRepo{
-			getByMeetingAndToken: func(_ context.Context, _, _ string) (Participant, error) { return Participant{ID: "p1"}, nil },
+			getByMeetingAndID: func(_ context.Context, _, _ string) (Participant, error) { return Participant{ID: "p1"}, nil },
 		}
 		err := NewService(pRepo, mRepo, &mockSlotsRepo{}).SetSlots(ctx, "m1", "p1", []int{0, 999})
 		if err != ErrSlotOutOfRange {

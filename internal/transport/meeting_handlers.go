@@ -2,12 +2,12 @@ package transport
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"nis-pipo/internal/meeting"
-	"nis-pipo/internal/middleware"
 )
 
 type MeetingHandler struct {
@@ -46,19 +46,16 @@ type FinalizeMeetingRequest struct {
 //	@Router		/api/meetings [get]
 func (h *MeetingHandler) List() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 		meetings, err := h.service.ListByOwner(r.Context(), ownerID)
 		if err != nil {
+			logError(r, "list meetings", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
-		}
-		if meetings == nil {
-			meetings = []meeting.Meeting{}
 		}
 		writeJSON(w, http.StatusOK, meetings)
 	}
@@ -78,9 +75,8 @@ func (h *MeetingHandler) List() http.HandlerFunc {
 //	@Router		/api/meetings [post]
 func (h *MeetingHandler) Create() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -105,6 +101,7 @@ func (h *MeetingHandler) Create() http.HandlerFunc {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			logError(r, "create meeting", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -123,7 +120,6 @@ func (h *MeetingHandler) Create() http.HandlerFunc {
 //	@Router		/api/meetings/{id} [get]
 func (h *MeetingHandler) GetByID() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
 		id := chi.URLParam(r, "id")
 		if id == "" {
 			http.Error(w, "id required", http.StatusBadRequest)
@@ -131,7 +127,12 @@ func (h *MeetingHandler) GetByID() http.HandlerFunc {
 		}
 		m, err := h.service.GetByID(r.Context(), id)
 		if err != nil {
-			http.Error(w, "not found", http.StatusNotFound)
+			if errors.Is(err, meeting.ErrNotFound) {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
+			logError(r, "get meeting", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 		writeJSON(w, http.StatusOK, m)
@@ -155,9 +156,8 @@ func (h *MeetingHandler) GetByID() http.HandlerFunc {
 //	@Router		/api/meetings/{id} [put]
 func (h *MeetingHandler) Update() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -181,6 +181,7 @@ func (h *MeetingHandler) Update() http.HandlerFunc {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
+			logError(r, "update meeting", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -201,9 +202,8 @@ func (h *MeetingHandler) Update() http.HandlerFunc {
 //	@Router		/api/meetings/{id} [delete]
 func (h *MeetingHandler) Delete() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -222,6 +222,7 @@ func (h *MeetingHandler) Delete() http.HandlerFunc {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
+			logError(r, "delete meeting", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -243,9 +244,8 @@ func (h *MeetingHandler) Delete() http.HandlerFunc {
 //	@Router		/api/meetings/{id}/results [get]
 func (h *MeetingHandler) GetResults() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -264,6 +264,7 @@ func (h *MeetingHandler) GetResults() http.HandlerFunc {
 				http.Error(w, "forbidden", http.StatusForbidden)
 				return
 			}
+			logError(r, "get results", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -287,9 +288,8 @@ func (h *MeetingHandler) GetResults() http.HandlerFunc {
 //	@Router		/api/meetings/{id}/finalize [put]
 func (h *MeetingHandler) Finalize() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		enableCors(w)
-		ownerID, _ := r.Context().Value(middleware.UserIDKey).(string)
-		if ownerID == "" {
+		ownerID, ok := ownerIDFromContext(r)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -317,6 +317,7 @@ func (h *MeetingHandler) Finalize() http.HandlerFunc {
 				http.Error(w, "final_slot_index out of range", http.StatusBadRequest)
 				return
 			}
+			logError(r, "finalize", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
