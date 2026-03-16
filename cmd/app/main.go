@@ -1,9 +1,11 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"nis-pipo/internal/db"
@@ -18,7 +20,19 @@ func main() {
 	godotenv.Load()
 
 	dsn := os.Getenv("DB_DSN")
-	dbx, err := db.Connect(dsn)
+	var (
+		dbx *sql.DB
+		err error
+	)
+
+	for i := 0; i < 10; i++ {
+		dbx, err = db.Connect(dsn)
+		if err == nil {
+			break
+		}
+		log.Printf("db connect attempt %d/10 failed: %v", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,6 +59,7 @@ func main() {
 		port = "8080"
 	}
 	log.Printf("Listening on :%s", port)
-	log.Printf("Swagger: http://localhost:%s/swagger/index.html", port)
+	log.Printf("Home: http://localhost:%s/", port)
+	log.Printf("Swagger: http://localhost:%s/swagger/", port)
 	log.Fatal(http.ListenAndServe(":"+port, handler))
 }

@@ -12,7 +12,8 @@ import (
 )
 
 type AuthHandler struct {
-	service *user.Service
+	service   *user.Service
+	jwtSecret string
 }
 
 type AuthRegisterRequest struct {
@@ -34,8 +35,8 @@ type AuthLoginResponse struct {
 	Token string `json:"token"`
 }
 
-func NewAuthHandler(service *user.Service) *AuthHandler {
-	return &AuthHandler{service: service}
+func NewAuthHandler(service *user.Service, jwtSecret string) *AuthHandler {
+	return &AuthHandler{service: service, jwtSecret: jwtSecret}
 }
 
 // Register godoc
@@ -149,10 +150,6 @@ func (h *AuthHandler) Me() http.Handler {
 }
 
 func (h *AuthHandler) generateJWT(userID, email string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "default-secret"
-	}
 	expiry := os.Getenv("JWT_EXPIRY")
 	if expiry == "" {
 		expiry = "24h"
@@ -167,5 +164,5 @@ func (h *AuthHandler) generateJWT(userID, email string) (string, error) {
 		"exp":     time.Now().Add(d).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(secret))
+	return token.SignedString([]byte(h.jwtSecret))
 }

@@ -12,7 +12,6 @@ function parseDateStart(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** Слот-индекс → дата и время (для подписей). */
 function slotToDateTime(m: Meeting, slotIndex: number): { date: Date; timeLabel: string } {
   const slotsPerDay = (24 * 60) / m.slot_minutes;
   const dayIndex = Math.floor(slotIndex / slotsPerDay);
@@ -36,15 +35,15 @@ function slotToDayLabel(m: Meeting, slotIndex: number): string {
 }
 
 export default function ParticipantPage() {
-  const { id, token: tokenParam } = useParams<{ id: string; token?: string }>();
+  const { id, participantId: participantIdParam } = useParams<{ id: string; participantId?: string }>();
   const navigate = useNavigate();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [displayName, setDisplayName] = useState('');
-  const [participantToken, setParticipantToken] = useState<string | null>(tokenParam ?? null);
+  const [participantId, setParticipantId] = useState<string | null>(participantIdParam ?? null);
 
   useEffect(() => {
-    if (tokenParam) setParticipantToken(tokenParam);
-  }, [tokenParam]);
+    if (participantIdParam) setParticipantId(participantIdParam);
+  }, [participantIdParam]);
   const [selectedSlots, setSelectedSlots] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,9 +66,9 @@ export default function ParticipantPage() {
     setError('');
     setLoading(true);
     try {
-      const { token: t } = await participants.create(id, displayName.trim());
-      setParticipantToken(t);
-      navigate(`/meetings/${id}/participate/${t}`, { replace: true });
+      const { id: createdParticipantId } = await participants.create(id, displayName.trim());
+      setParticipantId(createdParticipantId);
+      navigate(`/meetings/${id}/participate/${createdParticipantId}`, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
     } finally {
@@ -78,12 +77,12 @@ export default function ParticipantPage() {
   };
 
   const handleSaveSlots = async () => {
-    if (!id || !participantToken) return;
+    if (!id || !participantId) return;
     setSaving(true);
     setError('');
     setSaveStatus('saving');
     try {
-      await participants.setSlots(id, participantToken, Array.from(selectedSlots).sort((a, b) => a - b));
+      await participants.setSlots(id, participantId, Array.from(selectedSlots).sort((a, b) => a - b));
       setSaveStatus('saved');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
@@ -114,7 +113,7 @@ export default function ParticipantPage() {
     );
   }
 
-  if (!participantToken) {
+  if (!participantId) {
     return (
       <Paper p="xl" maw={400} mx="auto" mt="xl">
         <Title order={2} mb="md">Участие во встрече</Title>

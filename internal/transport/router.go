@@ -14,7 +14,7 @@ import (
 )
 
 func SetupRouter(userService *user.Service, meetingService *meeting.Service, participantService *participant.Service, jwtSecret string) http.Handler {
-	authHandler := NewAuthHandler(userService)
+	authHandler := NewAuthHandler(userService, jwtSecret)
 	meetingHandler := NewMeetingHandler(meetingService)
 	participantHandler := NewParticipantHandler(participantService)
 
@@ -25,7 +25,24 @@ func SetupRouter(userService *user.Service, meetingService *meeting.Service, par
 	r.Post("/api/auth/login", authHandler.Login().ServeHTTP)
 	r.With(middleware.Auth(jwtSecret)).Get("/api/auth/me", authHandler.Me().ServeHTTP)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("API")) })
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>nis-pipo</title>
+</head>
+<body>
+  <h1>nis-pipo</h1>
+  <p>Available pages:</p>
+  <ul>
+    <li><a href="/swagger/">Swagger UI</a></li>
+    <li><a href="/metrics">Metrics</a></li>
+  </ul>
+</body>
+</html>`))
+	})
 	r.Handle("/swagger/*", httpSwagger.Handler())
 
 	r.Route("/api/meetings", func(r chi.Router) {

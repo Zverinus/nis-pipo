@@ -59,5 +59,12 @@ func (s *Service) SetSlots(ctx context.Context, meetingID, participantID string,
 			unique = append(unique, idx)
 		}
 	}
-	return s.slotsRepo.SetSlots(ctx, p.ID, unique)
+	err = s.slotsRepo.SetSlots(ctx, meetingID, p.ID, unique)
+	if errors.Is(err, meeting.ErrNotFound) {
+		return ErrMeetingNotFound
+	}
+	if errors.Is(err, meeting.ErrMeetingFinalized) {
+		return ErrMeetingFinalized
+	}
+	return err
 }

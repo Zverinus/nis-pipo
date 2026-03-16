@@ -44,6 +44,10 @@ func RecordRequest(r *http.Request, status int, duration time.Duration) {
 	if ctx := chi.RouteContext(r.Context()); ctx != nil && ctx.RoutePattern() != "" {
 		path = ctx.RoutePattern()
 	}
+	switch path {
+	case "/metrics", "/swagger/*", "/favicon.ico":
+		return
+	}
 	statusStr := strconv.Itoa(status)
 	requestsTotal.WithLabelValues(r.Method, path, statusStr).Inc()
 	requestDuration.WithLabelValues(r.Method, path).Observe(duration.Seconds())

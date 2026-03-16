@@ -21,7 +21,7 @@ function App() {
         <Route path="meetings/new" element={token ? <MeetingNew /> : <Navigate to="/login" replace />} />
         <Route path="meetings/:id" element={<MeetingPage token={token} />} />
         <Route path="meetings/:id/participate" element={<ParticipantPage />} />
-        <Route path="meetings/:id/participate/:token" element={<ParticipantPage />} />
+        <Route path="meetings/:id/participate/:participantId" element={<ParticipantPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

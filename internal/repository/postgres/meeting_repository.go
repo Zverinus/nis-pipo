@@ -48,7 +48,7 @@ func (repo *MeetingRepo) ListByOwner(ctx context.Context, ownerID string) ([]mee
 		return nil, err
 	}
 	defer rows.Close()
-	var out []meeting.Meeting
+	out := make([]meeting.Meeting, 0)
 	for rows.Next() {
 		var m meeting.Meeting
 		var finalSlot sql.NullInt32

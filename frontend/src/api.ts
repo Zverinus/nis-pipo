@@ -1,11 +1,9 @@
-// Прямой запрос к бэку (CORS настроен). Прокси может терять Authorization.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 function getToken(): string | null {
   const t = localStorage.getItem('token');
   if (!t) return null;
   const trimmed = t.trim();
-  // Mantine useLocalStorage хранит через JSON.stringify — строка попадает как "eyJ..."
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     try {
       return JSON.parse(trimmed) as string;
@@ -16,7 +14,6 @@ function getToken(): string | null {
   return trimmed;
 }
 
-/** Декодирует JWT payload (без проверки подписи) — для отображения email. */
 export function decodeTokenPayload(token: string): { email?: string } | null {
   try {
     const parts = token.split('.');
@@ -78,7 +75,7 @@ export const auth = {
 };
 
 export const meetings = {
-  list: () => api<Meeting[]>('/api/meetings'),
+  list: () => api<Meeting[] | null>('/api/meetings').then((data) => data ?? []),
   get: (id: string) => api<Meeting>(`/api/meetings/${id}`, { token: false }),
   create: (data: CreateMeetingInput) =>
     api<Meeting>('/api/meetings', {
@@ -86,7 +83,7 @@ export const meetings = {
       body: JSON.stringify(data),
     }),
   results: (id: string) =>
-    api<SlotResult[]>(`/api/meetings/${id}/results`),
+    api<SlotResult[] | null>(`/api/meetings/${id}/results`).then((data) => data ?? []),
   finalize: (id: string, finalSlotIndex: number) =>
     api<void>(`/api/meetings/${id}/finalize`, {
       method: 'PUT',
@@ -96,7 +93,7 @@ export const meetings = {
 
 export const participants = {
   create: (meetingId: string, displayName: string) =>
-    api<{ id: string; token: string }>(
+    api<{ id: string }>(
       `/api/meetings/${meetingId}/participants`,
       {
         method: 'POST',
@@ -104,8 +101,8 @@ export const participants = {
         token: false,
       }
     ),
-  setSlots: (meetingId: string, token: string, slotIndexes: number[]) =>
-    api<void>(`/api/meetings/${meetingId}/participants/${token}/slots`, {
+  setSlots: (meetingId: string, participantId: string, slotIndexes: number[]) =>
+    api<void>(`/api/meetings/${meetingId}/participants/${participantId}/slots`, {
       method: 'PUT',
       body: JSON.stringify({ slot_indexes: slotIndexes }),
       token: false,

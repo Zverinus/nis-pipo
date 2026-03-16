@@ -7,7 +7,7 @@ import (
 )
 
 type SlotsRepo interface {
-	SetSlots(ctx context.Context, participantID string, slotIndexes []int) error
+	SetSlots(ctx context.Context, meetingID, participantID string, slotIndexes []int) error
 	GetDetailsByMeeting(ctx context.Context, meetingID string) ([]SlotResult, error)
 }
 
@@ -15,6 +15,7 @@ var (
 	ErrInvalidDates     = errors.New("date_end must be >= date_start")
 	ErrInvalidSlotMin   = errors.New("slot_minutes must be 15, 30 or 60")
 	ErrNotFound         = errors.New("meeting not found")
+	ErrMeetingFinalized = errors.New("meeting is finalized")
 	ErrForbidden        = errors.New("forbidden")
 	ErrInvalidSlotIndex = errors.New("final_slot_index out of range")
 )

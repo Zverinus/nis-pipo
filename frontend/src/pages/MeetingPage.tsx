@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Title, Paper, Stack, Table, Button, Loader, CopyButton } from '@mantine/core';
+import { Title, Paper, Stack, Table, Button, Loader } from '@mantine/core';
 import { meetings } from '../api';
 import type { Meeting, SlotResult } from '../api';
 
@@ -139,11 +139,12 @@ export default function MeetingPage({ token }: MeetingPageProps) {
         <p style={{ fontSize: 12, color: 'var(--mantine-color-dimmed)' }}>
           Отправьте эту ссылку участникам. Они введут имя и отмечат удобные слоты.
         </p>
-        <CopyButton value={participantUrl}>
-          {({ copied, copy }) => (
-            <Button variant="light" onClick={copy}>{copied ? 'Скопировано' : 'Копировать ссылку'}</Button>
-          )}
-        </CopyButton>
+        <a
+          href={participantUrl}
+          style={{ wordBreak: 'break-all', color: 'var(--mantine-color-blue-6)' }}
+        >
+          {participantUrl}
+        </a>
       </Paper>
     </Stack>
   );

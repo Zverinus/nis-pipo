@@ -68,7 +68,7 @@ type mockSlotsRepo struct {
 	getDetailsByMeeting func(ctx context.Context, meetingID string) ([]SlotResult, error)
 }
 
-func (m *mockSlotsRepo) SetSlots(ctx context.Context, participantID string, slotIndexes []int) error {
+func (m *mockSlotsRepo) SetSlots(ctx context.Context, meetingID, participantID string, slotIndexes []int) error {
 	return nil
 }
 

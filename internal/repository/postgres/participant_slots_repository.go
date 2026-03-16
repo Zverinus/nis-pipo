@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -18,12 +19,24 @@ func NewParticipantSlotsRepo(db *sql.DB) *ParticipantSlotsRepo {
 	return &ParticipantSlotsRepo{db: db}
 }
 
-func (repo *ParticipantSlotsRepo) SetSlots(ctx context.Context, participantID string, slotIndexes []int) error {
+func (repo *ParticipantSlotsRepo) SetSlots(ctx context.Context, meetingID, participantID string, slotIndexes []int) error {
 	tx, err := repo.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+
+	var status string
+	err = tx.QueryRowContext(ctx, `SELECT status FROM meetings WHERE id = $1::uuid FOR UPDATE`, meetingID).Scan(&status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return meeting.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if status != "active" {
+		return meeting.ErrMeetingFinalized
+	}
 
 	if _, err = tx.ExecContext(ctx, `DELETE FROM participant_slots WHERE participant_id = $1::uuid`, participantID); err != nil {
 		return err

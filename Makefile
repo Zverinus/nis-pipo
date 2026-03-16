@@ -1,36 +1,56 @@
 BINARY := build/nis-pipo
 DB_DSN ?= postgres://postgres:1234@localhost:5432/pipo?sslmode=disable
+CACHE_DIR := .cache
+GOCACHE ?= $(CURDIR)/$(CACHE_DIR)/go-build
+GOMODCACHE ?= $(CURDIR)/$(CACHE_DIR)/go-mod
 
-.PHONY: build run test clean force-build db migrate-up migrate-down swagger docker-build
+export GOCACHE
+export GOMODCACHE
 
-build:
-	@mkdir -p build
+.PHONY: deps build run test clean up down restart logs migrate-up migrate-down swagger
+
+prepare-cache:
+	@mkdir -p build $(GOCACHE) $(GOMODCACHE)
+
+deps: prepare-cache
+	go mod download
+
+build: prepare-cache
 	go build -o $(BINARY) ./cmd/app
-
-force-build:
-	@mkdir -p build
-	go build -a -o $(BINARY) ./cmd/app
 
 run: build
 	./$(BINARY)
 
-test:
+test: prepare-cache
 	go test ./...
 
 clean:
 	rm -f $(BINARY)
 
-db:
-	docker compose up -d db
+up:
+	docker compose up -d --build
+	@echo "Frontend: http://localhost:8081"
+	@echo "Swagger:  http://localhost:8080/swagger/index.html"
+	@echo "Metrics:  http://localhost:8080/metrics"
 
-migrate-up:
+down:
+	docker compose down
+
+restart:
+	docker compose down
+	docker compose up -d --build
+	@echo "Frontend: http://localhost:8081"
+	@echo "Swagger:  http://localhost:8080/swagger/index.html"
+	@echo "Metrics:  http://localhost:8080/metrics"
+
+logs:
+	docker compose logs -f
+
+migrate-up: prepare-cache
 	go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$(DB_DSN)" up
 
-migrate-down:
+migrate-down: prepare-cache
 	go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations postgres "$(DB_DSN)" down
 
-swagger:
+swagger: prepare-cache
 	go run github.com/swaggo/swag/cmd/swag@latest init -g internal/transport/router.go -o internal/transport/docs --parseDependency --parseInternal
-
-docker-build:
-	docker build -t nis-pipo:latest .

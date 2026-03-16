@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16
-    container_name: pg-pipo
     restart: always
     environment:
       POSTGRES_DB: pipo
@@ -9,6 +8,30 @@ services:
       POSTGRES_PASSWORD: 1234
     ports:
       - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DB_DSN: postgres://postgres:1234@db:5432/pipo?sslmode=disable
+      JWT_SECRET: default-secret
+      PORT: 8080
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: always
+    depends_on:
+      - app
+    ports:
+      - "8081:80"
 
 volumes:
   pgdata:
