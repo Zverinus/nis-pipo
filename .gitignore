@@ -34,4 +34,3 @@ go.work.sum
 
 build/
 
-internal/transport/docs

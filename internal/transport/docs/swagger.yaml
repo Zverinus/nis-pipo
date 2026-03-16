@@ -1,0 +1,419 @@
+definitions:
+  internal_transport.AuthLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_transport.AuthLoginResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  internal_transport.AuthRegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_transport.AuthRegisterResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
+  internal_transport.CreateMeetingRequest:
+    properties:
+      date_end:
+        type: string
+      date_start:
+        type: string
+      description:
+        type: string
+      slot_minutes:
+        type: integer
+      title:
+        type: string
+    type: object
+  internal_transport.CreateParticipantRequest:
+    properties:
+      display_name:
+        type: string
+    type: object
+  internal_transport.FinalizeMeetingRequest:
+    properties:
+      final_slot_index:
+        type: integer
+    type: object
+  internal_transport.SetSlotsRequest:
+    properties:
+      slot_indexes:
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_transport.UpdateMeetingRequest:
+    properties:
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  nis-pipo_internal_meeting.Meeting:
+    properties:
+      created_at:
+        type: string
+      date_end:
+        type: string
+      date_start:
+        type: string
+      description:
+        type: string
+      final_slot_index:
+        type: integer
+      id:
+        type: string
+      owner_id:
+        type: string
+      slot_minutes:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  nis-pipo_internal_meeting.SlotResult:
+    properties:
+      count:
+        type: integer
+      participant_names:
+        items:
+          type: string
+        type: array
+      slot_index:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: email, password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.AuthLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport.AuthLoginResponse'
+        "400":
+          description: bad request
+        "401":
+          description: invalid email or password
+      summary: Login
+      tags:
+      - auth
+  /api/auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: unauthorized
+      security:
+      - BearerAuth: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: email, password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.AuthRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_transport.AuthRegisterResponse'
+        "400":
+          description: bad request
+        "409":
+          description: user already exists
+      summary: Register
+      tags:
+      - auth
+  /api/meetings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/nis-pipo_internal_meeting.Meeting'
+            type: array
+        "401":
+          description: unauthorized
+      security:
+      - BearerAuth: []
+      summary: List meetings of current user (owner)
+      tags:
+      - meetings
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: meeting data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.CreateMeetingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/nis-pipo_internal_meeting.Meeting'
+        "400":
+          description: bad request
+        "401":
+          description: unauthorized
+      security:
+      - BearerAuth: []
+      summary: Create meeting
+      tags:
+      - meetings
+  /api/meetings/{id}:
+    delete:
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: no content
+        "401":
+          description: unauthorized
+        "403":
+          description: forbidden
+        "404":
+          description: not found
+      security:
+      - BearerAuth: []
+      summary: Delete meeting
+      tags:
+      - meetings
+    get:
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/nis-pipo_internal_meeting.Meeting'
+        "404":
+          description: not found
+      summary: Get meeting by ID
+      tags:
+      - meetings
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: title, description
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.UpdateMeetingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/nis-pipo_internal_meeting.Meeting'
+        "400":
+          description: bad request
+        "401":
+          description: unauthorized
+        "403":
+          description: forbidden
+        "404":
+          description: not found
+      security:
+      - BearerAuth: []
+      summary: Update meeting (title, description)
+      tags:
+      - meetings
+  /api/meetings/{id}/finalize:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: final_slot_index
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.FinalizeMeetingRequest'
+      responses:
+        "204":
+          description: no content
+        "400":
+          description: bad request
+        "401":
+          description: unauthorized
+        "403":
+          description: forbidden
+        "404":
+          description: not found
+      security:
+      - BearerAuth: []
+      summary: Finalize meeting (set final slot), owner only
+      tags:
+      - meetings
+  /api/meetings/{id}/participants:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: display_name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.CreateParticipantRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: bad request
+        "404":
+          description: meeting not found
+        "409":
+          description: meeting finalized
+      summary: Create participant for meeting
+      tags:
+      - participants
+  /api/meetings/{id}/participants/{participant_id}/slots:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: participant ID
+        in: path
+        name: participant_id
+        required: true
+        type: string
+      - description: slot_indexes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.SetSlotsRequest'
+      responses:
+        "204":
+          description: no content
+        "400":
+          description: bad request
+        "404":
+          description: participant or meeting not found
+        "409":
+          description: meeting finalized
+      summary: Set participant slot choices
+      tags:
+      - participants
+  /api/meetings/{id}/results:
+    get:
+      parameters:
+      - description: meeting ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/nis-pipo_internal_meeting.SlotResult'
+            type: array
+        "401":
+          description: unauthorized
+        "403":
+          description: forbidden
+        "404":
+          description: not found
+      security:
+      - BearerAuth: []
+      summary: Get meeting results (slot counts), owner only
+      tags:
+      - meetings
+swagger: "2.0"
