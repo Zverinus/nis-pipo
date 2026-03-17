@@ -29,9 +29,10 @@ clean:
 
 up:
 	docker compose up -d --build
-	@echo "Frontend: http://localhost:8081"
-	@echo "Swagger:  http://localhost:8080/swagger/index.html"
-	@echo "Metrics:  http://localhost:8080/metrics"
+	@echo "Frontend:   http://localhost:8081"
+	@echo "Swagger:    http://localhost:8080/swagger/index.html"
+	@echo "Metrics:    http://localhost:8080/metrics"
+	@echo "Prometheus: http://localhost:9090"
 
 down:
 	docker compose down
@@ -39,9 +40,10 @@ down:
 restart:
 	docker compose down
 	docker compose up -d --build
-	@echo "Frontend: http://localhost:8081"
-	@echo "Swagger:  http://localhost:8080/swagger/index.html"
-	@echo "Metrics:  http://localhost:8080/metrics"
+	@echo "Frontend:   http://localhost:8081"
+	@echo "Swagger:    http://localhost:8080/swagger/index.html"
+	@echo "Metrics:    http://localhost:8080/metrics"
+	@echo "Prometheus: http://localhost:9090"
 
 logs:
 	docker compose logs -f

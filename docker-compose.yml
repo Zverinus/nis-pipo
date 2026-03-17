@@ -33,5 +33,19 @@ services:
     ports:
       - "8081:80"
 
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    restart: always
+    depends_on:
+      - app
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
 volumes:
   pgdata:
+  prometheus_data:

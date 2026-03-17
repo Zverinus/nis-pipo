@@ -78,6 +78,8 @@ PUT /api/meetings/{id}/participants/{participant_id}/slots — сохранен�
 
 GET /metrics — метрики
 
+Prometheus: http://localhost:9090
+
 GET /swagger/index.html — Swagger
 
 
@@ -89,6 +91,8 @@ Frontend: http://localhost:8081
 Swagger: http://localhost:8080/swagger/index.html
 
 Metrics: http://localhost:8080/metrics
+
+Prometheus: http://localhost:9090
 
 Логи: make logs
 
