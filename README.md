@@ -111,3 +111,12 @@ Prometheus: http://localhost:9090
 Применить миграции: make migrate-up
 
 Откатить миграции: make migrate-down
+
+# Kubernetes
+
+minikube start
+minikube image build -t nis-pipo:latest .
+minikube image build -t nis-pipo-frontend:latest ./frontend
+kubectl apply -f k8s/
+minikube service frontend
+
